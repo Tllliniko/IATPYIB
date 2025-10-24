@@ -57,7 +57,7 @@ sessionInfo()
     WARNING: Rtools is required to build R packages but is not currently installed. Please download and install the appropriate version of Rtools before proceeding:
 
     https://cran.rstudio.com/bin/windows/Rtools/
-    Устанавливаю пакет в ‘C:/Users/София/AppData/Local/R/win-library/4.5’
+    Устанавливаю пакет в ‘C:/Users/Никита/AppData/Local/R/win-library/4.5’
     (потому что ‘lib’ не определено)
     устанавливаю также зависимости ‘utf8’, ‘pkgconfig’, ‘generics’, ‘pillar’, ‘tibble’, ‘tidyselect’
     пробую URL 'https://mirror.truenetwork.ru/CRAN/bin/windows/contrib/4.5/utf8_1.2.6.zip'
@@ -76,7 +76,7 @@ sessionInfo()
     пакет ‘dplyr’ успешно распакован, MD5-суммы проверены
 
     Скачанные бинарные пакеты находятся в
-        C:\Users\София\AppData\Local\Temp\Rtmp6FICuZ\downloaded_packages
+        C:\Users\Никита\AppData\Local\Temp\Rtmp6FICuZ\downloaded_packages
     > library(dplyr)
 
     Присоединяю пакет: ‘dplyr’
