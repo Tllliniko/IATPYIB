@@ -12,7 +12,7 @@ tolmachevnikita04@yandex.ru
 
 ## Исходные данные
 
-1.  Программное обеспечение Windows 10
+1.  Программное обеспечение Windows 11
 2.  Rstudio Desktop
 3.  Наше рабочее окружение
 
@@ -581,7 +581,7 @@ Values) 7. Составить отчет и выложить его и исхо�
     Ошибка в get() : аргумент "x" пропущен, умолчаний нет
 
     > getwd()
-    [1] "C:/Users/София/Documents/myrepoz"
+    [1] "C:/Users/Никита/Documents/myrepoz"
 
     | You're the best!
 
@@ -781,7 +781,7 @@ Values) 7. Составить отчет и выложить его и исхо�
              size isdir mode               mtime               ctime               atime exe
     mytest.R    0 FALSE  666 2025-09-27 12:43:54 2025-09-27 12:43:54 2025-09-27 12:43:54  no
              uname         udomain
-    mytest.R София DESKTOP-A5OLFMQ
+    mytest.R Никита DESKTOP-A5OLFMQ
 
     | All that hard work is paying off!
 
@@ -892,7 +892,7 @@ Values) 7. Составить отчет и выложить его и исхо�
 
     > 
     > getwd()
-    [1] "C:/Users/София/Documents/myrepoz/testdir"
+    [1] "C:/Users/Никита/Documents/myrepoz/testdir"
 
     | Not quite, but you're learning! Try again. Or, type info() for more options.
 
