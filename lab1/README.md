@@ -124,7 +124,7 @@ Values) 7. Составить отчет и выложить его и исхо�
     | Welcome to swirl! Please sign in. If you've been here before, use the same name as you
     | did then. If you are new, call yourself something unique.
 
-    What shall I call you? Sofia
+    What shall I call you? Nikita
 
     | Would you like to continue with one of these lessons?
 
@@ -796,7 +796,7 @@ Values) 7. Составить отчет и выложить его и исхо�
 
     > 
     > 
-    > file.rename("mytest.R", "mytest2.R")
+    > file.rename("ttttest.R", "ttttest2.R")
     [1] TRUE
 
     | You got it!
@@ -810,14 +810,14 @@ Values) 7. Составить отчет и выложить его и исхо�
     ...
 
       |=========================================================                      |  72%
-    | Make a copy of "mytest2.R" called "mytest3.R" using file.copy().
+    | Make a copy of "ttttest2.R" called "ttttest3.R" using file.copy().
 
     > 
     > 
     > 
     > 
     > 
-    > file.copy("mytest2.R", "mytest3.R")
+    > file.copy("tttttest2.R", "tttttest3.R")
     [1] TRUE
 
     | All that practice is paying off!
@@ -839,8 +839,8 @@ Values) 7. Составить отчет и выложить его и исхо�
     > 
     > 
     > 
-    > file.path("mytest3.R")
-    [1] "mytest3.R"
+    > file.path("ttttest3.R")
+    [1] "tttttest3.R"
 
     | Your dedication is inspiring!
 
@@ -1472,7 +1472,7 @@ Values) 7. Составить отчет и выложить его и исхо�
     > 
     > 
     > 
-    > my_name <- c(my_char, "Sofia")
+    > my_name <- c(my_char, "Nikita")
 
     | Your dedication is inspiring!
 
@@ -1480,7 +1480,7 @@ Values) 7. Составить отчет и выложить его и исхо�
     | Take a look at the contents of my_name.
 
     > 
-    > my_name <- c(my_char, "Sofia")
+    > my_name <- c(my_char, "Nikita")
 
     | You almost had it, but not quite. Try again. Or, type info() for more options.
 
@@ -1488,7 +1488,7 @@ Values) 7. Составить отчет и выложить его и исхо�
 
     > 
     > my_name
-    [1] "My"       "name"     "is"       "Sofia"
+    [1] "My"       "name"     "is"       "Nikita"
 
     | You are amazing!
 
@@ -1498,7 +1498,7 @@ Values) 7. Составить отчет и выложить его и исхо�
 
     > 
     > paste(my_name, collapse = " ")
-    [1] "My name is Sofia"
+    [1] "My name is Nikita"
 
     | Perseverance, that's the answer.
 
