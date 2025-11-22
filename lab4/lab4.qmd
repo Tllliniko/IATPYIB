@@ -1,0 +1,221 @@
+---
+title: "Исследование метаданных DNS трафика"
+subtitle: "Отчет по практике 4"
+author: "tolmachevnikita04@yandex.ru"
+format: 
+  md:
+    output-file: README.md
+---
+
+## Цель работы
+
+1.  Зекрепить практические навыки использования языка программирования R для обработки данных
+2.  Закрепить знания основных функций обработки данных экосистемы tidyverse языка R
+3.  Закрепить навыки исследования метаданных DNS трафика
+
+## Исходные данные
+
+1.  Программное обеспечение ОС Windows 11 Pro
+2.  RStudio
+3.  Интерпретатор языка R 4.5.1
+
+
+
+## Шаги:
+1 Импорт данных
+```{r}
+library(dplyr)
+library(tidyverse)
+library(httr)
+library(jsonlite)
+
+download.file(
+  "https://storage.yandexcloud.net/dataset.ctfsec/dns.zip", 
+  destfile = "dns.zip"
+)
+
+unzip("dns.zip")
+
+dns_data <- read.table(
+  "dns.log",
+  header = FALSE,
+  sep = "\t",
+  comment.char = "#",
+  fill = TRUE
+)
+```
+
+2 Добавьте пропущенные данные о структуре данных (назначении столбцов)
+```{r}
+
+colnames(dns_data) <- c(
+  "ts", "uid", "id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p",
+  "proto", "trans_id", "rtt", "query", "qclass", "qclass_name",
+  "qtype", "qtype_name", "rcode", "rcode_name", "AA", "TC", "RD",
+  "RA", "Z", "answers", "TTLs"
+)
+```
+
+3 Преобразуйте данные в столбцах в нужный формат
+```{r}
+dns_data <- dns_data %>%
+  mutate(
+    ts = as.POSIXct(ts, origin = "1970-01-01"),
+    id.orig_p = as.integer(id.orig_p),
+    id.resp_p = as.integer(id.resp_p),
+    trans_id = as.integer(trans_id)
+  )
+```
+
+4 Просмотрите общую структуру данных с помощью функции glimpse()
+```{r}
+glimpse(dns_data)
+```
+
+### Анализ данных
+4 Сколько участников информационного обмена в сети Доброй Организации?
+```{r}
+unique_participants <- dns_data %>%
+  summarise(
+    unique_sources = n_distinct(id.orig_h),
+    unique_destinations = n_distinct(id.resp_h),
+    total_unique = n_distinct(c(id.orig_h, id.resp_h))
+  )
+print(unique_participants)
+```
+
+5 Какое соотношение участников обмена внутри сети и участников обращений к внешним ресурсам?
+```{r}
+all_ips <- unique(c(dns_data$id.orig_h, dns_data$id.resp_h))
+length(all_ips[grepl("^(10\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[0-1])\\.)", all_ips)])/length(setdiff(all_ips, all_ips[grepl("^(10\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[0-1])\\.)", all_ips)]))
+```
+6 Найдите топ-10 участников сети, проявляющих наибольшую сетевую активность.
+```{r}
+dns_data %>%  count(id.orig_h, sort = TRUE) %>%  head(10)
+```
+
+7 Найдите топ-10 доменов, к которым обращаются пользователи сети и соответственное количество обращений
+```{r}
+top_domains <- dns_data %>% 
+  count(query, sort = TRUE) %>% 
+  slice(1:10)
+
+top_domains
+```
+
+8 Опеределите базовые статистические характеристики (функция summary() ) интервала времени между последовательным обращениями к топ-10 доменам.
+```{r}
+top_domains_list <- top_domains$query
+
+time_intervals <- dns_data %>%
+  filter(query %in% top_domains_list) %>%
+  arrange(query, ts) %>%
+  group_by(query) %>%
+  mutate(
+    time_diff = as.numeric(difftime(ts, lag(ts), units = "secs"))
+  ) %>%
+  filter(!is.na(time_diff))
+
+time_intervals %>%
+  group_by(query) %>%
+  summarise(
+    min    = min(time_diff),
+    q1     = quantile(time_diff, 0.25),
+    median = median(time_diff),
+    mean   = mean(time_diff),
+    q3     = quantile(time_diff, 0.75),
+    max    = max(time_diff)
+  )
+```
+
+9 Часто вредоносное программное обеспечение использует DNS канал в качестве канала управления, периодически отправляя запросы на подконтрольный злоумышленникам DNS сервер.
+По периодическим запросам на один и тот же домен можно выявить скрытый DNS канал. Есть ли такие IP адреса в исследуемом датасете?
+```{r}
+suspicious_activity <- dns_data %>%
+  group_by(id.orig_h, query) %>%
+  summarise(
+    request_count = n(),
+    .groups = 'drop'
+  ) %>%
+  filter(request_count > 10) %>%
+  arrange(desc(request_count))
+periodic_requests <- dns_data %>%
+  semi_join(suspicious_activity, by = c("id.orig_h", "query")) %>%
+  arrange(id.orig_h, query, ts) %>%
+  group_by(id.orig_h, query) %>%
+  mutate(time_diff = as.numeric(difftime(ts, lag(ts), units = "secs"))) %>%
+  filter(!is.na(time_diff)) %>%
+  summarise(
+    request_count = n(),
+    mean_interval = mean(time_diff),
+    sd_interval = sd(time_diff),
+    cv = sd(time_diff) / mean(time_diff),
+    .groups = 'drop'
+  ) %>%
+  filter(cv < 0.5) %>%
+  arrange(cv)
+print(periodic_requests)
+```
+
+10 Определите местоположение (страну, город) и организацию-провайдера для топ-10 доменов.
+```{r}
+library(dplyr)
+library(httr)
+library(jsonlite)
+
+top_domains <- dns_data %>% 
+  count(query, sort = TRUE) %>% 
+  slice(1:10)
+
+top_domains_list <- top_domains$query
+
+domain_ips <- dns_data %>%
+  filter(query %in% top_domains_list) %>%
+  select(query, answers) %>%
+  filter(!is.na(answers) & answers != "-") %>%
+  distinct()
+
+get_geolocation <- function(ip) {
+  url <- paste0("http://ip-api.com/json/", ip)
+  tryCatch({
+    response <- GET(url)
+    if (status_code(response) == 200) {
+      data <- fromJSON(content(response, "text"))
+      return(data.frame(
+        ip = ip,
+        country = ifelse(is.null(data$country), NA, data$country),
+        city = ifelse(is.null(data$city), NA, data$city),
+        org = ifelse(is.null(data$org), NA, data$org),
+        stringsAsFactors = FALSE
+      ))
+    }
+    return(NULL)
+  }, error = function(e) {
+    return(NULL)
+  })
+}
+geolocation_results <- data.frame()
+
+for (i in 1:min(10, nrow(domain_ips))) {
+  ip <- domain_ips$answers[i]
+  domain <- domain_ips$query[i]
+  
+  geo_data <- get_geolocation(ip)
+  
+  if (!is.null(geo_data)) {
+    geo_data$domain <- domain
+    geolocation_results <- rbind(geolocation_results, geo_data)
+  }
+  
+  Sys.sleep(1)
+}
+
+print(geolocation_results)
+```
+## Оценка результата
+
+В ходе практической работы была проведена аналитическая обработка сетевых данных внутреннего сегмента Доброй Организации. Удалось восстановить отсутствующие метаданные, выполнить анализ DNS-активности и подготовить ответы на поставленные вопросы.
+
+## Вывод
+
+Таким образом, в процессе выполнения задания были укреплены практические навыки работы с языком R, освоены ключевые функции пакетов экосистемы tidyverse, а также получен опыт исследования и интерпретации метаданных DNS-трафика.
