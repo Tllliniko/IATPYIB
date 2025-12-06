@@ -1,0 +1,151 @@
+---
+title: "Исследование вредоносной активности в домене Windows"
+author: "tolmachevnikita04@yandex.ru"
+format: 
+  md:
+    output-file: README.md
+---
+
+## Цель работы
+
+  1. Закрепить навыки исследования данных журнала Windows Active Directory
+  2. Изучить структуру журнала системы Windows Active Directory
+  3. Закрепить практические навыки использования языка программирования R для
+обработки данных
+  4. Закрепить знания основных функций обработки данных экосистемы tidyverse
+языка R
+
+
+## Исходные данные
+
+1. Программное обеспечение Windows 11 Pro
+2. Rstudio Desktop
+3. Интерпретатор языка R 4.5.1
+4. Программный пакет dplyr
+5. Данные журнала Windows Active Directory
+
+## Шаги:
+
+### Подготовка данных
+
+1.Импортируйте данные в R.  
+Используем `jsonlite::stream_in()` для чтения большого JSON-файла.
+Датасет доступен по ссылке: https://storage.yandexcloud.net/iamcth-data/dataset.tar.gz.
+```{r}
+library(jsonlite)
+library(xml2)
+library(rvest)
+library(dplyr)
+library(tidyr)
+library(purrr)
+
+link <- "https://storage.yandexcloud.net/iamcth-data/dataset.tar.gz"
+local_file <- "dataset_logs.tar.gz"
+
+download.file(link, local_file, mode = "wb", quiet = TRUE)
+
+files_in_archive <- untar(local_file, list = TRUE)
+json_target <- files_in_archive[grepl("\\.json$", files_in_archive)]
+
+extract_dir <- tempdir()
+untar(local_file, files = json_target, exdir = extract_dir)
+
+json_path <- file.path(extract_dir, json_target)
+
+con <- file(json_path, "r")
+logs_data <- stream_in(con)
+cat("Загружено записей:", nrow(logs_data), "\n")
+
+events_url <- "https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/plan/appendix-l--events-to-monitor"
+html_doc <- read_html(events_url)
+events_raw <- html_table(html_doc, fill = TRUE)[[1]]
+```
+
+2.Приведите данные к tidy-формату, преобразовав типы столбцов.
+```{r}
+logs_clean <- logs_data %>%
+mutate(
+timestamp = as.POSIXct(`@timestamp`, format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC"),
+across(where(is.character), ~ na_if(., ""))
+)
+
+cat("Подготовленные данные:", nrow(logs_clean), "строк,", ncol(logs_clean), "столбцов\n")
+```
+
+3.Посмотрите структуру датафреймов.
+```{r}
+glimpse(logs_clean)
+glimpse(events_raw)
+```
+
+
+### Анализ данных
+
+1.Раскройте вложенные структуры с помощью unnest()
+Используйте параметр names_sep для сохранения префиксов колонок.
+```{r}
+nested <- names(logs_clean)[map_lgl(logs_clean, is.data.frame)]
+
+for (col in nested) {
+logs_clean <- logs_clean %>% unnest(all_of(col), names_sep = "_")
+}
+
+```
+
+2.Удалите столбцы, содержащие только одно уникальное значение.
+```{r}
+constant_cols <- names(logs_clean)[sapply(logs_clean, function(x) {
+if (is.list(x) || is.data.frame(x)) return(FALSE)
+n_distinct(na.omit(x)) <= 1
+})]
+
+logs_clean <- logs_clean %>% select(-any_of(constant_cols))
+
+cat("Удалено константных колонок:", length(constant_cols), "\n")
+cat("Текущее количество колонок:", ncol(logs_clean), "\n")
+```
+
+3.Определите количество уникальных хостов в логах.
+```{r}
+host_count <- logs_clean %>%
+distinct(winlog_computer_name) %>%
+nrow()
+
+cat("Количество уникальных хостов:", host_count, "\n")
+
+```
+
+4.Подготовьте таблицу с расшифровкой Windows Event_ID.
+```{r}
+
+events_table <- events_raw %>%
+rename(
+winlog_event_id = `Current Windows Event ID`,
+event_description = `Event Summary`
+) %>%
+mutate(
+winlog_event_id = as.integer(winlog_event_id)
+)
+
+glimpse(events_table)
+
+```
+
+5.Подсчитайте количество событий высокого и среднего уровня значимости.
+```{r}
+high_events <- logs_clean %>% filter(log_level == "error")
+medium_events <- logs_clean %>% filter(log_level == "warning")
+
+cat("Высокий уровень (error):", nrow(high_events), "\n")
+cat("Средний уровень (warning):", nrow(medium_events), "\n")
+cat("Всего значимых событий:", nrow(high_events) + nrow(medium_events), "\n")
+
+```
+
+## Оценка результата
+
+  В ходе практической работы были загружены и преобразованы журналы Windows Active Directory, проведено раскрытие вложенных структур и удаление нерелевантных колонок. Исследовано количество хостов и выполнена классификация событий по уровням значимости.
+
+## Вывод
+
+  Используя инструменты tidyverse и язык R, удалось провести анализ активности в домене Windows, преобразовать данные в удобный формат и выделить важные события системы. Работа позволила закрепить навыки обработки логов и базового анализа событий безопасности.
